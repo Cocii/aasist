@@ -466,7 +466,7 @@ class Residual_block(nn.Module):
         return out
 
 
-class Model(nn.Module):
+class Assist(nn.Module):
     def __init__(self, d_args):
         super().__init__()
 

@@ -15,24 +15,20 @@ def genSpoof_list(dir_meta, is_train=False, is_eval=False):
     with open(dir_meta, "r") as f:
         l_meta = f.readlines()
 
-    if is_train:
+    if is_train or is_eval:
+        i = 0
         for line in l_meta:
-            _, key, _, _, label = line.strip().split(" ")
-            file_list.append(key)
-            d_meta[key] = 1 if label == "bonafide" else 0
-        return d_meta, file_list
-
-    elif is_eval:
-        for line in l_meta:
-            _, key, _, _, _ = line.strip().split(" ")
-            #key = line.strip()
-            file_list.append(key)
-        return file_list
-    else:
-        for line in l_meta:
-            _, key, _, _, label = line.strip().split(" ")
-            file_list.append(key)
-            d_meta[key] = 1 if label == "bonafide" else 0
+            path, _ = line.strip().split("|")
+            label = path.split("/")[-2]
+            # 0 for real, 1 for fake
+            assert label == "real_audios", "dataset path error!"
+            path = path + ".wav"
+            file_list.append(path)
+            d_meta[i] = 0
+            i += 1
+            file_list.append(path.replace('real', 'fake'))
+            d_meta[i] = 1
+            i += 1
         return d_meta, file_list
 
 
@@ -79,7 +75,25 @@ class Dataset_ASVspoof2019_train(Dataset):
         y = self.labels[key]
         return x_inp, y
 
+class Bigvgan_train(Dataset):
+    def __init__(self, list_IDs, labels):
+        """self.list_IDs	: list of strings (each string: utt key),
+           self.labels      : dictionary (key: utt key, value: label integer)"""
+        self.list_IDs = list_IDs
+        self.labels = labels
+        self.cut = 64600  # take ~4 sec audio (64600 samples)
 
+    def __len__(self):
+        return len(self.list_IDs)
+
+    def __getitem__(self, index):
+        key = self.list_IDs[index]
+        X, _ = sf.read(key)
+        X_pad = pad_random(X, self.cut)
+        x_inp = Tensor(X_pad)
+        y = self.labels[index]
+        return x_inp, y
+    
 class Dataset_ASVspoof2019_devNeval(Dataset):
     def __init__(self, list_IDs, base_dir):
         """self.list_IDs	: list of strings (each string: utt key),
